@@ -27,6 +27,6 @@ Commands are seperated by `\n`. Considering that there are Regex patterns in pla
 
 ## Example
 
-`0x82` 1 `0x7f` 2 `0x80`
+`0x82` 1 `0x7f` 2 `0x80`\n
 
-This code starts with the command to launch a firework. It then passes a list of 2 values, 1 and 2. It then terminates the list by using the 0x80 character.
+This code starts with the command to launch a firework. It then passes a list of 2 values, 1 and 2. It then terminates the list by using the 0x80 character. This would launch fireworks 1 and 2.
