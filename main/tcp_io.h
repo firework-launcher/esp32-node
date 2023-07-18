@@ -10,6 +10,7 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "pthread.h"
+#include "cJSON.h"
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
@@ -81,63 +82,27 @@ static void tcp_inserver_thread(void)
     }
 }
 
-void process_rx_data(char rx_data[128]) {
-    char recv_data[128];
-    memcpy(recv_data, rx_data, strlen(rx_data)+1);
-    char *data = strtok(recv_data, "\n");
-    char *cmd;
-    char *cmd_cpy;
-    char full_msg[128] = "";
-    while (data != NULL) {
-        free(cmd);
-        char cmd[128] = strtok(data, "\x80");
-        while (cmd != NULL)  {
-            printf(cmd);
-            if (strcmp(cmd, "") != 0) {
-                int code = cmd[0];
-                char full_cmd[128];
-                char values[128];
-                memcpy(values, cmd, strlen(cmd)+1);
-                memmove(values, values+1, strlen(values));
-                char *value = strtok(values, "\x7f");
-                char values_formatted[128] = "[";
-                int x = 0;
-                while (value != NULL) {
-                    if (x != 0) {
-                        strcat(values_formatted, ", ");
-                    }
-                    if (code == 130) {
-                        launch_firework(atoi(value));
-                    }
-                    strcat(values_formatted, value);
-                    value = strtok(NULL, "\x7f");
-                    x += 1;
+void process_rx_data(char rx_data[8192]) {
+    cJSON *json = cJSON_Parse(rx_data);
+    cJSON *payload;
+    if (json != 0) {
+        switch (cJSON_GetObjectItem(json, "code")->valueint) {
+            case 1:
+                // Trigger Firework
+                ESP_LOGI(TAG_TCP_RX, "Recieved code 1");
+                payload = cJSON_GetObjectItem(json, "payload");
+                for (int i = 0; i < cJSON_GetArraySize(payload); i++) {
+                    launch_firework(cJSON_GetArrayItem(payload, i)->valueint);
                 }
-                strcat(values_formatted, "]");
-                char *instruction_name;
-                switch (code) {
-                    case 130:
-                        instruction_name = "Trigger Firework";
-                        break;
-                    case 132:
-                        instruction_name = "Start Pattern Data";
-                        break;
-                    case 133:
-                        instruction_name = "End Pattern Data";
-                        break;
-                    case 134:
-                        instruction_name = "Run Pattern";
-                        break;
-                    default:
-                        instruction_name = "Unrecognized Command";
-                        break;
-                }
-                ESP_LOGI(TAG_TCP_RX, "Recived, %s, Values: %s", instruction_name, values_formatted);
-            }
-            cmd = strtok(NULL, "\x80");
+                break;
+            default:
+                ESP_LOGW(TAG_TCP_RX, "RX Client sent unknown code, ignoring.");
+                break;
         }
-        data = strtok(NULL, "\n");
+    } else {
+        ESP_LOGW(TAG_TCP_RX, "RX Client sent invalid JSON data.");
     }
+    cJSON_Delete(json);
 }
 
 static void tcp_outserver_thread(void)
@@ -145,7 +110,7 @@ static void tcp_outserver_thread(void)
     char addr_str[128];
     int addr_family;
     int ip_protocol;
-    char recv_buffer[128];
+    char recv_buffer[8192];
     int len;
 
     while (1) {
@@ -189,6 +154,7 @@ static void tcp_outserver_thread(void)
             while (1) {
                 len = recv(sock, &recv_buffer, sizeof(recv_buffer) - 1, 0);
                 recv_buffer[len] = 0;
+
                 if (len != 0) {
                     if (len < 0) {
                         ESP_LOGE(TAG_TCP_RX, "Failed to recieve, closing connection.");
@@ -199,8 +165,7 @@ static void tcp_outserver_thread(void)
                         rx_connected = false;
                         break;
                     }
-                    ESP_LOGI(TAG_TCP_RX, "len var: %d", len);
-                    ESP_LOGI(TAG_TCP_RX, "New message from TCP RX: %s", recv_buffer);
+                    ESP_LOGI(TAG_TCP_RX, "Recieved data, Length: %d", len-2);
                     process_rx_data(recv_buffer);
                 }
                 vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -209,18 +174,17 @@ static void tcp_outserver_thread(void)
     }
 }
 
-void start_tcptx_thread(void) {
+void start_tcptx_thread(pthread_attr_t attr) {
     pthread_t tcpthread;
     int res;
 
-    res = pthread_create(&tcpthread, NULL, tcp_inserver_thread, NULL);
-    ESP_LOGI(TAG_TCP_TX, "Started TCP TX Thread");
+    res = pthread_create(&tcpthread, &attr, tcp_inserver_thread, NULL);
+    ESP_LOGI(TAG_TCP_TX, "Started TCP TX Thread: %d", res);
 }
 
-void start_tcprx_thread(void) {
+void start_tcprx_thread(pthread_attr_t attr) {
     pthread_t tcpthread;
     int res;
-
-    res = pthread_create(&tcpthread, NULL, tcp_outserver_thread, NULL);
-    ESP_LOGI(TAG_TCP_RX, "Started TCP RX Thread");
+    res = pthread_create(&tcpthread, &attr, tcp_outserver_thread, NULL);
+    ESP_LOGI(TAG_TCP_RX, "Started TCP RX Thread: %d", res);
 }

@@ -28,8 +28,11 @@ void app_main(void)
     init_nvs();
     bool wifi_ret = init_wifi();
     if (wifi_ret == true) {
-        start_tcptx_thread();
-        start_tcprx_thread();
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setstacksize(&attr, 16384);
+        start_tcptx_thread(attr);
+        start_tcprx_thread(attr);
         init_gpio();
         launcher_main();
     }
