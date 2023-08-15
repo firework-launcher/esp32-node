@@ -20,8 +20,6 @@
 static const char *TAG_TCP_TX = "TCP TX";
 static const char *TAG_TCP_RX = "TCP RX";
 char msg_buffer_input[128];
-bool tx_connected = false;
-bool rx_connected = false;
 
 static void tcp_inserver_thread(void)
 {
@@ -86,14 +84,21 @@ void process_rx_data(char rx_data[8192]) {
     cJSON *json = cJSON_Parse(rx_data);
     cJSON *payload;
     if (json != 0) {
+        int code = cJSON_GetObjectItem(json, "code")->valueint;
+        ESP_LOGI(TAG_TCP_RX, "Recieved code %d", cJSON_GetObjectItem(json, "code")->valueint);
         switch (cJSON_GetObjectItem(json, "code")->valueint) {
             case 1:
                 // Trigger Firework
-                ESP_LOGI(TAG_TCP_RX, "Recieved code 1");
                 payload = cJSON_GetObjectItem(json, "payload");
-                for (int i = 0; i < cJSON_GetArraySize(payload); i++) {
-                    launch_firework(cJSON_GetArrayItem(payload, i)->valueint);
-                }
+                launch_firework(cJSON_GetArrayItem(payload, 0)->valueint, cJSON_GetArrayItem(payload, 1)->valueint);
+                break;
+            case 2:
+                // Arm
+                arm();
+                break;
+            case 3:
+                // Disarm
+                disarm();
                 break;
             default:
                 ESP_LOGW(TAG_TCP_RX, "RX Client sent unknown code, ignoring.");

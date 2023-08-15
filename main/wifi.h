@@ -53,9 +53,9 @@ static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_FAIL_BIT      BIT1
 
 static const char *TAG_WIFI = "WIFI";
-
+bool wifi_connected = false;
+char ip_address[16];
 static int s_retry_num = 0;
-
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -63,6 +63,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        wifi_connected = false;
         if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
             esp_wifi_connect();
             s_retry_num++;
@@ -74,7 +75,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG_WIFI, "IP: " IPSTR, IP2STR(&event->ip_info.ip));
+        sprintf(ip_address, IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
+        wifi_connected = true;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
@@ -144,8 +147,56 @@ bool wifi_init_sta(void)
     }
 }
 
+void setDisplay(int lastPart) {
+    int index = 0;
+
+    while (lastPart > 0 && index < 4) {
+        ip_digits[index] = lastPart % 10;
+        lastPart /= 10;
+        index++;
+    }
+    set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], 0);
+}
+
+
+void digit_display_thread(void) {
+    while (wifi_connected == false) {
+        set_dispboard_pca(10, 10, 10, 0);
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+        set_dispboard_pca(11, 11, 11, 0);
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
+    
+    char buffer[16];
+    strncpy(buffer, ip_address, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+
+    char *token;
+    int lastPart = 0;
+    token = strtok(buffer, ".");
+    for(int i = 0; i < 3 && token != NULL; i++) {
+        token = strtok(NULL, ".");
+    }
+    
+    if (token != NULL) {
+        lastPart = atoi(token);
+        setDisplay(lastPart);
+    }
+}
+
 int get_signal_strength(void) {
-    wifi_ap_record_t ap;
-    ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&ap));
-    return ap.rssi;
+    if (wifi_connected == true) {
+        wifi_ap_record_t ap;
+        ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&ap));
+        return ap.rssi;
+    } else {
+        return 0;
+    }
+}
+
+void start_wifi_display(pthread_attr_t attr) {
+    pthread_t wifidisplaythread;
+    int res;
+    res = pthread_create(&wifidisplaythread, &attr, digit_display_thread, NULL);
+    ESP_LOGI(TAG_WIFI, "Started WiFi IP Display Thread: %d", res);
 }

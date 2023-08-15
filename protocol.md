@@ -6,9 +6,11 @@ Commands are sent in JSON. It is an object. The code key is the only required ke
 
 ### ESP codes
 
-| Code | Meaning          | Additional information                                                                              |
-|------|------------------|-----------------------------------------------------------------------------------------------------|
-| 1    | Trigger Firework | For the payload, multiple numbers can be passed in the array which set of every firework in series. |
+| Code | Meaning             | Additional information                                                                                    |
+|------|---------------------|-----------------------------------------------------------------------------------------------------------|
+| 1    | Trigger Firework    | For the payload, multiple numbers can be passed in the array which set of every firework in series.       |
+| 2    | Arm                 | This code does not have any payload.                                                                      |
+| 3    | Disarm              | This code does not have any payload.                                                                      |
 
 ## Example
 
