@@ -15,6 +15,7 @@ int byte_mappings[16] = {4, 7, 6, 5, 3, 15, 2, 1, 0, 14, 10, 13, 12, 11, 9, 8};
 bool tx_connected = false;
 bool rx_connected = false;
 bool armed = false;
+bool leds_stopped = false;
 
 static esp_err_t init_i2c(void) {
     int i2c_master_port = 0;
@@ -174,7 +175,11 @@ cJSON* read_bytes(uint8_t address) {
     if (ret != ESP_OK) {
         ESP_LOGE(TAG_I2C, "Failed to read from PCA9535, trying again..");
     } else if (ret == ESP_OK) {
-        set_led_colors(read[0], read[1]);
+        if (armed == true) {
+            leds_stopped = true;
+        } else {
+            set_led_colors(read[0], read[1]);
+        }
         cJSON* json_data1 = cJSON_CreateNumber(read[0]);
         cJSON* json_data2 = cJSON_CreateNumber(read[1]);
         cJSON_AddItemToArray(json_array, json_data1);
@@ -242,10 +247,16 @@ void arm(void) {
     armed = true;
     gpio_set_level(4, 1);
     set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], 1);
+    while (leds_stopped == false) {
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    ws2811_set_all(0, 0, 0);
+    ws2811_set_leds();
 }
 
 void disarm(void) {
     armed = false;
+    leds_stopped = false;
     gpio_set_level(4, 0);
     set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], 0);
 }

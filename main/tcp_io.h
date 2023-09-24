@@ -100,6 +100,11 @@ void process_rx_data(char rx_data[8192]) {
                 // Disarm
                 disarm();
                 break;
+            case 4:
+                // Run Step
+                payload = cJSON_GetObjectItem(json, "payload");
+                run_step(cJSON_GetArrayItem(payload, 0), cJSON_GetArrayItem(payload, 1));
+                break;
             default:
                 ESP_LOGW(TAG_TCP_RX, "RX Client sent unknown code, ignoring.");
                 break;
@@ -157,7 +162,7 @@ static void tcp_outserver_thread(void)
             }
             rx_connected = true;
             while (1) {
-                len = recv(sock, &recv_buffer, sizeof(recv_buffer) - 1, 0);
+                len = recv(sock, &recv_buffer, sizeof(recv_buffer) - 2, 0);
                 recv_buffer[len] = 0;
 
                 if (len != 0) {

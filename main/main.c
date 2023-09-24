@@ -25,17 +25,20 @@ void tx_main(void) {
     int inputData[2];
     cJSON* inputDataArrayJSON;
     cJSON* inputDataEntryJSON;
+    cJSON* read_data;
 
     while (1) {
         root = cJSON_CreateObject();
 
         cJSON_AddNumberToObject(root, "signalStrength", get_signal_strength());
 
-        
-        cJSON_AddItemToObject(root, "inputData", read_bytes(0x20));
+        read_data = read_bytes(0x20);
+        cJSON_AddItemToObject(root, "inputData", read_data);
 
         data = cJSON_PrintUnformatted(root);
         sprintf(msg_buffer_input, "%s\r\n", data);
+        free(data);
+        cJSON_Delete(root);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
