@@ -1,0 +1,291 @@
+#include <string.h>
+
+#include <freertos/FreeRTOS.h>
+#include <esp_http_server.h>
+#include <freertos/task.h>
+#include <esp_ota_ops.h>
+#include <esp_system.h>
+#include <sys/param.h>
+
+extern const uint8_t home_html_start[] asm("_binary_home_html_start");
+extern const uint8_t home_html_end[] asm("_binary_home_html_end");
+
+extern const uint8_t main_css_start[] asm("_binary_main_css_start");
+extern const uint8_t main_css_end[] asm("_binary_main_css_end");
+
+
+esp_err_t home_get_handler(httpd_req_t *req)
+{
+    httpd_resp_send(req, (const char *) home_html_start, home_html_end - home_html_start);
+    return ESP_OK;
+}
+
+esp_err_t restart_get_handler(httpd_req_t *req)
+{
+    esp_restart();
+    const char resp[] = "OK";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+esp_err_t maincss_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/css");
+    httpd_resp_send(req, (const char *) main_css_start, main_css_end - main_css_start);
+    return ESP_OK;
+}
+
+void set_nvs_keyvalue(char* key, char value[100]) {
+    nvs_handle_t wifinvs_handle;
+    esp_err_t err = nvs_open("wifi", NVS_READWRITE, &wifinvs_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Done\n");
+    }
+    ESP_LOGI("OTA", "NVS Value length: %d", strlen(value));
+    nvs_set_str(wifinvs_handle, key, value);
+}
+
+void set_nvs_keyvalue_int(char* key, uint16_t value) {
+    nvs_handle_t wifinvs_handle;
+    esp_err_t err = nvs_open("wifi", NVS_READWRITE, &wifinvs_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Done\n");
+    }
+    nvs_set_u16(wifinvs_handle, key, value);
+}
+
+int random_number(int min_num, int max_num) {
+    if (min_num > max_num) {
+        int temp = min_num;
+        min_num = max_num;
+        max_num = temp;
+    }
+    
+    uint32_t range = max_num - min_num + 1;
+    return esp_random() % range + min_num;
+}
+
+esp_err_t configure_wifipasswd_post_handler(httpd_req_t *req) {
+    char content[101]; // Increase buffer size by 1 for null terminator
+
+    memset(content, 0, sizeof(content));
+
+    /* Truncate if content length larger than the buffer minus 1 (to allow for null terminator) */
+    size_t recv_size = MIN(req->content_len, sizeof(content) - 1);
+
+    int ret = httpd_req_recv(req, content, recv_size);
+    if (ret <= 0) {
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            httpd_resp_send_408(req);
+        }
+        return ESP_FAIL;
+    }
+    content[ret] = '\0';  // Null terminate the received data
+    ESP_LOGI("WIFI CONFIG", "%s", content);
+    set_nvs_keyvalue("passwd", content);
+    const char resp[] = "OK";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    esp_restart();
+    return ESP_OK;
+}
+
+esp_err_t configure_wifissid_post_handler(httpd_req_t *req) {
+    char content[100];
+
+    /* Truncate if content length larger than the buffer */
+    size_t recv_size = MIN(req->content_len, sizeof(content));
+
+    int ret = httpd_req_recv(req, content, recv_size);
+    if (ret <= 0) {
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            httpd_resp_send_408(req);
+        }
+        return ESP_FAIL;
+    }
+    set_nvs_keyvalue("ssid", content);
+    const char resp[] = "OK";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+/*
+ * Handle OTA file upload
+ */
+esp_err_t update_post_handler(httpd_req_t *req)
+{
+    char buf[1000];
+    esp_ota_handle_t ota_handle;
+    int remaining = req->content_len;
+
+    const esp_partition_t *ota_partition = esp_ota_get_next_update_partition(NULL);
+    ESP_ERROR_CHECK(esp_ota_begin(ota_partition, OTA_SIZE_UNKNOWN, &ota_handle));
+
+    while (remaining > 0) {
+        int recv_len = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)));
+
+        // Timeout Error: Just retry
+        if (recv_len == HTTPD_SOCK_ERR_TIMEOUT) {
+            continue;
+
+        // Serious Error: Abort OTA
+        } else if (recv_len <= 0) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Protocol Error");
+            return ESP_FAIL;
+        }
+
+        // Successful Upload: Flash firmware chunk
+        if (esp_ota_write(ota_handle, (const void *)buf, recv_len) != ESP_OK) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Flash Error");
+            return ESP_FAIL;
+        }
+
+        remaining -= recv_len;
+    }
+
+    // Validate and switch to new OTA image and reboot
+    if (esp_ota_end(ota_handle) != ESP_OK || esp_ota_set_boot_partition(ota_partition) != ESP_OK) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Validation / Activation Error");
+            return ESP_FAIL;
+    }
+
+    httpd_resp_sendstr(req, "Firmware update complete, rebooting now!\n");
+
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+    esp_restart();
+
+    return ESP_OK;
+}
+
+/*
+ * HTTP Server
+ */
+
+httpd_uri_t home_get = {
+    .uri      = "/",
+    .method   = HTTP_GET,
+    .handler  = home_get_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t maincss_get = {
+    .uri      = "/static/main.css",
+    .method   = HTTP_GET,
+    .handler  = maincss_get_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t wificonfiguressid_post = {
+    .uri      = "/configure_wifi_ssid",
+    .method   = HTTP_POST,
+    .handler  = configure_wifissid_post_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t wificonfigurepasswd_post = {
+    .uri      = "/configure_wifi_passwd",
+    .method   = HTTP_POST,
+    .handler  = configure_wifipasswd_post_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t update_post = {
+    .uri      = "/update",
+    .method   = HTTP_POST,
+    .handler  = update_post_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t restart_get = {
+    .uri      = "/restart",
+    .method   = HTTP_GET,
+    .handler  = restart_get_handler,
+    .user_ctx = NULL
+};
+
+static esp_err_t http_server_init(void)
+{
+    static httpd_handle_t http_server = NULL;
+
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    if (httpd_start(&http_server, &config) == ESP_OK) {
+        httpd_register_uri_handler(http_server, &home_get);
+        httpd_register_uri_handler(http_server, &maincss_get);
+        httpd_register_uri_handler(http_server, &update_post);
+        httpd_register_uri_handler(http_server, &restart_get);
+        httpd_register_uri_handler(http_server, &wificonfiguressid_post);
+        httpd_register_uri_handler(http_server, &wificonfigurepasswd_post);
+    }
+
+    return http_server == NULL ? ESP_FAIL : ESP_OK;
+}
+
+static esp_err_t softap_init(char wifi_ssid_ota[10])
+{
+    esp_err_t res = ESP_OK;
+
+    res |= esp_netif_init();
+    res |= esp_event_loop_create_default();
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    res |= esp_wifi_init(&cfg);
+
+    wifi_config_t wifi_config = {0};
+    wifi_config.ap.channel = 6;
+    wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    wifi_config.ap.max_connection = 3;
+    strcpy((char *)wifi_config.ap.ssid, wifi_ssid_ota);
+    wifi_config.ap.ssid_len = strlen(wifi_ssid_ota);
+    
+    res |= esp_wifi_set_mode(WIFI_MODE_AP);
+    res |= esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config);
+    res |= esp_wifi_start();
+
+    return res;
+}
+
+void flash_leds(void) {
+    while (true) {
+        ws2811_set_all(20, 0, 0);
+        ws2811_set_leds();
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+        ws2811_set_all(20, 20, 0);
+        ws2811_set_leds();
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
+}
+
+void start_led_flash_thread(pthread_attr_t attr) {
+    pthread_t ledflash_thread;
+    int res;
+    res = pthread_create(&ledflash_thread, &attr, flash_leds, NULL);
+}
+
+void ota(pthread_attr_t attr) {
+    if (wifi_connected != true) {
+        int node_id = random_number(1, 255);
+        char wifi_ssid_ota[10];
+        sprintf(wifi_ssid_ota, "Node %d", node_id);
+        setDisplay(node_id);
+        start_led_flash_thread(attr);
+        softap_init(wifi_ssid_ota);
+    }
+    ESP_ERROR_CHECK(http_server_init());
+
+    const esp_partition_t *partition = esp_ota_get_running_partition();
+    printf("Currently running partition: %s\r\n", partition->label);
+
+    esp_ota_img_states_t ota_state;
+    if (esp_ota_get_state_partition(partition, &ota_state) == ESP_OK) {
+        if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
+            esp_ota_mark_app_valid_cancel_rollback();
+        }
+    }
+
+    while(1) vTaskDelay(10);
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Firework Node</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/static/main.css">
+    </head>
+    <body>
+        <ul class="navbar">
+            <li class="navbar-item-li"><a class="navtitle" href="/">Firework Node</a></li>
+        </ul>
+        <div style="text-align: center">
+            <h1>WiFi Configuration</h1>
+            <h4 style="padding: 4px">The node was unable to connect to WiFi. Please configure the node to use a working WiFi network.</h4>
+            <p>SSID <input type="text" id="ssid"></p>
+            <p>Password <input type="password" id="passwd"></p>
+            <br/>
+            <button class="firework_button" onclick="send()">Save & Restart</button>
+        </div>
+        <script>
+            function send_data(path, data) {
+                var http = new XMLHttpRequest();
+                http.open('POST', path, true);
+
+                http.onreadystatechange = function() {//Call a function when the state changes.
+                    if(http.readyState == 4 && http.status == 200) {
+                        alert(http.responseText);
+                    }
+                }
+                http.send(data);
+            }
+            function send() {
+                send_data("/configure_wifi_ssid", document.getElementById("ssid").value);
+                send_data("/configure_wifi_passwd", document.getElementById("passwd").value);
+                document.getElementById("ssid").value = "";
+                document.getElementById("passwd").value = "";
+            }
+        </script>
+    </body>
+</html>

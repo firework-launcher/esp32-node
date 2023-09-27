@@ -11,8 +11,6 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-#define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
-#define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_ESP_MAXIMUM_RETRY  CONFIG_ESP_MAXIMUM_RETRY
 
 #if CONFIG_ESP_WPA3_SAE_PWE_HUNT_AND_PECK
@@ -109,8 +107,6 @@ bool wifi_init_sta(void)
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .password = EXAMPLE_ESP_WIFI_PASS,
             /* Authmode threshold resets to WPA2 as default if password matches WPA2 standards (pasword len => 8).
              * If you want to connect the device to deprecated WEP/WPA networks, Please set the threshold value
              * to WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK and set the password with length and format matching to
@@ -121,6 +117,8 @@ bool wifi_init_sta(void)
             .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
         },
     };
+    strcpy((char *)wifi_config.sta.ssid, wifi_ssid);
+    strcpy((char *)wifi_config.sta.password, wifi_password);
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
     ESP_ERROR_CHECK(esp_wifi_start() );
@@ -139,7 +137,7 @@ bool wifi_init_sta(void)
         return true;
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG_WIFI, "Failed to connect to SSID:%s, password:%s",
-                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+                 wifi_ssid, wifi_password);
         return false;
     } else {
         ESP_LOGE(TAG_WIFI, "UNEXPECTED EVENT");
@@ -155,6 +153,7 @@ void setDisplay(int lastPart) {
         lastPart /= 10;
         index++;
     }
+    ESP_LOGI("setDisplay", "lastPart: %d, digits: %d, %d, %d", lastPart, ip_digits[2], ip_digits[1], ip_digits[0]);
     set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], 0);
 }
 
@@ -165,22 +164,27 @@ void digit_display_thread(void) {
         vTaskDelay(250 / portTICK_PERIOD_MS);
         set_dispboard_pca(11, 11, 11, 0);
         vTaskDelay(250 / portTICK_PERIOD_MS);
+        if (entering_ota == true) {
+            break;
+        }
     }
-    
-    char buffer[16];
-    strncpy(buffer, ip_address, sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = '\0';
 
-    char *token;
-    int lastPart = 0;
-    token = strtok(buffer, ".");
-    for(int i = 0; i < 3 && token != NULL; i++) {
-        token = strtok(NULL, ".");
-    }
-    
-    if (token != NULL) {
-        lastPart = atoi(token);
-        setDisplay(lastPart);
+    if (entering_ota != true) {
+        char buffer[16];
+        strncpy(buffer, ip_address, sizeof(buffer) - 1);
+        buffer[sizeof(buffer) - 1] = '\0';
+
+        char *token;
+        int lastPart = 0;
+        token = strtok(buffer, ".");
+        for(int i = 0; i < 3 && token != NULL; i++) {
+            token = strtok(NULL, ".");
+        }
+        
+        if (token != NULL) {
+            lastPart = atoi(token);
+            setDisplay(lastPart);
+        }
     }
 }
 

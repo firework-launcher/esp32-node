@@ -9,7 +9,6 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
-#include "pthread.h"
 #include "cJSON.h"
 #include "lwip/err.h"
 #include "lwip/sockets.h"
@@ -19,6 +18,7 @@
 
 static const char *TAG_TCP_TX = "TCP TX";
 static const char *TAG_TCP_RX = "TCP RX";
+bool entering_ota = false;
 char msg_buffer_input[128];
 
 static void tcp_inserver_thread(void)
@@ -64,6 +64,11 @@ static void tcp_inserver_thread(void)
         }
         tx_connected = true;
         while (1) {
+            if (entering_ota == true) {
+                shutdown(sock, 0);
+                close(sock);
+                break;
+            }
             if (strcmp(msg_buffer_input, "") != 0) {
                 send(sock, msg_buffer_input, strlen(msg_buffer_input), 0);
                 strcpy(msg_buffer_input, "");
@@ -71,13 +76,14 @@ static void tcp_inserver_thread(void)
             vTaskDelay(100 / portTICK_PERIOD_MS);
         }
 
-        if (sock != -1) {
+        if (sock != -1 && entering_ota == false) {
             ESP_LOGE(TAG_TCP_TX, "Connection to controller lost.");
             shutdown(sock, 0);
             close(sock);
             tx_connected = false;
         }
     }
+    ESP_LOGI(TAG_TCP_TX, "TCP TX thread ended.");
 }
 
 void process_rx_data(char rx_data[8192]) {
@@ -105,6 +111,11 @@ void process_rx_data(char rx_data[8192]) {
                 payload = cJSON_GetObjectItem(json, "payload");
                 run_step(cJSON_GetArrayItem(payload, 0), cJSON_GetArrayItem(payload, 1));
                 break;
+            case 5:
+                // OTA
+                ESP_LOGI("OTA", "Shutting down everything and running OTA.");
+                entering_ota = true;
+                break;
             default:
                 ESP_LOGW(TAG_TCP_RX, "RX Client sent unknown code, ignoring.");
                 break;
@@ -124,6 +135,9 @@ static void tcp_outserver_thread(void)
     int len;
 
     while (1) {
+        if (entering_ota == true) {
+            break;
+        }
         struct sockaddr_in dest_addr;
         dest_addr.sin_addr.s_addr = htonl(INADDR_ANY);
         dest_addr.sin_family = AF_INET;
@@ -155,6 +169,11 @@ static void tcp_outserver_thread(void)
         struct sockaddr_storage source_addr;
         uint addr_len = sizeof(source_addr);
         while (1) {
+            if (entering_ota == true) {
+                shutdown(listen_sock, 0);
+                close(listen_sock);
+                break;
+            }
             int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
             if (sock < 0) {
                 ESP_LOGE(TAG_TCP_RX, "Unable to accept connection: errno %d", errno);
@@ -162,6 +181,11 @@ static void tcp_outserver_thread(void)
             }
             rx_connected = true;
             while (1) {
+                if (entering_ota == true) {
+                    shutdown(sock, 0);
+                    close(sock);
+                    break;
+                }
                 len = recv(sock, &recv_buffer, sizeof(recv_buffer) - 2, 0);
                 recv_buffer[len] = 0;
 
@@ -182,19 +206,18 @@ static void tcp_outserver_thread(void)
             }
         }
     }
+    ESP_LOGI(TAG_TCP_RX, "TCP RX thread ended.");
 }
 
 void start_tcptx_thread(pthread_attr_t attr) {
-    pthread_t tcpthread;
     int res;
 
-    res = pthread_create(&tcpthread, &attr, tcp_inserver_thread, NULL);
+    res = pthread_create(&tcptxthread, &attr, tcp_inserver_thread, NULL);
     ESP_LOGI(TAG_TCP_TX, "Started TCP TX Thread: %d", res);
 }
 
 void start_tcprx_thread(pthread_attr_t attr) {
-    pthread_t tcpthread;
     int res;
-    res = pthread_create(&tcpthread, &attr, tcp_outserver_thread, NULL);
+    res = pthread_create(&tcprxthread, &attr, tcp_outserver_thread, NULL);
     ESP_LOGI(TAG_TCP_RX, "Started TCP RX Thread: %d", res);
 }

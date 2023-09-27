@@ -1,0 +1,364 @@
+:root {
+    --fg: #ffffff;
+    --bg: #303030;
+    --hamburger-menu-bg: #202020;
+
+    --font: Arial, Helvetica, sans-serif;
+
+    --navbar-color: #fc5050;
+    --navbar-title-color: #fc2020;
+
+    --default-button-color: #177bed;
+    --red-button-color: #ff2667;
+    --yellow-button-color: #cde03c;
+    --green-button-color: #50c760;
+
+    --error-color: red;
+    --error-color-secondary: #a8100d;
+
+}
+
+body {
+    margin: 0;
+    background-color: var(--bg);
+}
+
+p {
+    font-family: var(--font);
+    color: var(--fg);
+}
+
+label {
+    font-family: var(--font);
+    color: var(--fg);
+}
+
+h1 {
+    font-family: var(--font);
+    color: var(--fg);
+}
+
+h2 {
+    font-family: var(--font);
+    color: var(--fg);
+}
+
+h3 {
+    font-family: var(--font);
+    color: var(--fg);
+}
+
+h4 {
+    font-family: var(--font);
+    color: var(--fg);
+}
+
+h5 {
+    font-family: var(--font);
+    color: var(--fg);
+}
+
+.firework_buttons {
+    text-align: center;
+}
+
+.firework_button {
+    border: none;
+    color: var(--fg);
+    padding: 15px 27px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    background-color: var(--default-button-color);
+    border-radius: 5px;
+    margin: 10px;
+    font-family: var(--font);
+    transition: opacity 0.5s;
+}
+
+.legend {
+    text-align: center;
+}
+
+.legend-txt {
+    font-family: var(--font);
+}
+
+.remove {
+    opacity: 0;
+}
+
+.add {
+    opacity: 0;
+}
+
+.navbar {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--navbar-color);
+}
+
+.navbar-item {
+    display: block;
+    color: var(--fg);
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-family: var(--font);
+}
+
+.hamburger-menu {
+    display: none;
+    color: var(--fg);
+    text-align: right;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-family: var(--font);
+}
+
+.navtitle {
+    background-color: var(--navbar-title-color);
+    margin: 0;
+    display: block;
+    color: var(--fg);
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-family: var(--font);
+}
+
+#hamburgerExpandMenu {
+    display: none;
+    background-color: var(--hamburger-menu-bg);
+}
+
+.navbar-item-expanded {
+    display: block;
+    color: var(--fg);
+    padding: 10px 16px;
+    text-decoration: none;
+    font-family: var(--font);
+}
+
+.hamburger-menu-svg {
+    filter: invert(99%) sepia(0%) saturate(7468%) hue-rotate(280deg) brightness(114%) contrast(97%);
+}
+
+.navbar-item-li {
+    float: left;
+}
+
+.navbar-item-hamburger {
+    float: right
+}
+
+.current_theme {
+    margin: 0;
+    padding: 10px;
+}
+
+.error {
+    color: var(--error-color);
+    text-align: center;
+}
+
+.themebutton {
+    padding: 15px 27px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: var(--font);
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--default-button-color);
+    border: 2px solid var(--default-button-color);
+}
+
+.resetbutton {
+    border: 2px solid var(--red-button-color);
+    color: var(--red-button-color);
+    padding: 15px 27px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: var(--font);
+}
+
+.themebuttons {
+    text-align: center;
+}
+
+.firework_button {
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--default-button-color);
+    border: 2px solid var(--default-button-color);
+}
+
+.sequence_delete_confirm {
+    padding: 15px 27px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: var(--font);
+    transition: opacity 0.5s;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--red-button-color);
+    border: 2px solid var(--red-button-color);
+}
+
+.yellow-fb {
+    padding: 15px 27px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: var(--font);
+    transition: opacity 0.5s;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--yellow-button-color);
+    border: 2px solid var(--yellow-button-color);
+}
+
+.sequencelist {
+    text-align: center;
+}
+
+.modal {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg);
+    border: 3px black solid;
+    width: 50%;
+    height: 40%;
+}
+
+.blur {
+    opacity: 0.3;
+}
+
+.inner-modal {
+    position: relative;
+    height: 100%;
+    padding: 5px;
+    text-align: center;
+}
+
+.modal-button {
+    position: absolute;
+    bottom: 15px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+.note_box {
+    width: 30%;
+}
+
+.error_msg {
+    display: none;
+    width: 100%;
+    background-color: var(--error-color-secondary);
+    text-align: center;
+    padding: 8px;
+}
+
+#error_text {
+    margin: 0;
+}
+
+.settings_content {
+    text-align: center;
+    margin: 15px;
+}
+
+.terminal {
+    width: 100%;
+    border: none;
+    transform: scale(100%, 100%);
+}
+
+.flexbox {
+    display: flex;
+    height: 100vh;
+}
+
+.addonstart_on {
+    padding: 15px 27px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: var(--font);
+    transition: opacity 0.5s;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--green-button-color);
+    border: 2px solid var(--green-button-color);
+}
+
+.addonstart_off {
+    padding: 15px 27px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 5px;
+    margin: 10px;
+    font-family: var(--font);
+    transition: opacity 0.5s;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--red-button-color);
+    border: 2px solid var(--red-button-color);
+}
+
+.disarmed {
+    opacity: 0.5;
+}
+
+.disconnected {
+    opacity: 0;
+}
+
+.firework_select {
+    display: none;
+    text-align: center;
+}
+
+.save_text {
+    display: none;
+    text-align: center;
+}
+
+@media screen and (max-width: 720px) {
+    .navbar-item {
+        display: none;
+    }
+    .hamburger-menu {
+        display: block;
+    }
+    .navtitle {
+        padding: 18px 16px;
+    }
+    .modal {
+        height: 45%;
+        width: 70%;
+    }
+}
