@@ -11,6 +11,7 @@ char* wifi_password = "Password";
 #include "tcp_io.h"
 #include "wifi.h"
 #include "ota.h"
+#include "discovery.h"
 
 static char *TAG_LAUNCHER = "LAUNCHER";
 
@@ -91,12 +92,13 @@ void app_main(void)
     start_wifi_display(attr);
     bool wifi_ret = init_wifi();
     while (wifi_ret != true) {
-        ESP_LOGE(TAG_WIFI, "Failed to connect to WiFi, trying again..");
+        ESP_LOGE(TAG_WIFI, "Failed to connect to WiFi");
         entering_ota = true;
         ota(attr);
     }
     start_tcptx_thread(attr);
     start_tcprx_thread(attr);
+    start_discovery_thread(attr);
     waiting();
     tx_main();
     ota(attr);
