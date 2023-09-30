@@ -153,7 +153,6 @@ void setDisplay(int lastPart) {
         lastPart /= 10;
         index++;
     }
-    ESP_LOGI("setDisplay", "lastPart: %d, digits: %d, %d, %d", lastPart, ip_digits[2], ip_digits[1], ip_digits[0]);
     set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], 0);
 }
 
