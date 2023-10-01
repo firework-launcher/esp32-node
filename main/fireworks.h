@@ -107,7 +107,7 @@ void launch_firework(int gpio, int pwm) {
         ESP_LOGI(TAG_FIREWORKS, "Trigger firework called for %d, pwm %d", gpio+1, pwm);
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, pwm));
         ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
         ws2811_set_rgb(gpio, 0, 0, 0);
         ws2811_set_leds();
         ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
@@ -128,21 +128,23 @@ void run_step(cJSON *fireworks, cJSON *pwm_json) {
             gpio = cJSON_GetArrayItem(fireworks, i)->valueint-1;
             pwm = cJSON_GetArrayItem(pwm_json, i)->valueint;
             ws2811_set_rgb(gpio, (int)((float)pwm/7500*255), 0, 0);
-            gpio = gpio_firework_mappings[gpio];
-            ledc_init_channel(gpio, i);
+            ws2811_set_leds();
+            ledc_init_channel(gpio_firework_mappings[gpio], i);
             ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, i, pwm));
             ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, i));
+            vTaskDelay(10 / portTICK_PERIOD_MS);
         }
         ws2811_set_leds();
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
         for (int i = 0; i < cJSON_GetArraySize(fireworks); i++) {
             gpio = cJSON_GetArrayItem(fireworks, i)->valueint-1;
             ws2811_set_rgb(gpio, 0, 0, 0);
-            gpio = gpio_firework_mappings[gpio];
+            ws2811_set_leds();
             ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, i, 0));
             ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, i));
             ledc_stop(LEDC_LOW_SPEED_MODE, i, 0);
             gpio_reset_pin(gpio_firework_mappings[gpio]);
+            vTaskDelay(10 / portTICK_PERIOD_MS);
         }
         ws2811_set_leds();
     }
