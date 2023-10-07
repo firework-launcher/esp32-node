@@ -21,3 +21,6 @@ Commands are sent in JSON. It is an object. The code key is the only required ke
 ```
 
 This example uses the code to trigger a firework, and passes 2 values in payload, 5 and 6. These values are taken as firework numbers and are both launched in series.
+
+# UDP Auto Discovery
+There is a UDP broadcast from the controller every 5 seconds that reads NODE_DISCOVERY. When a node picks this up, it responds with NODE_RESPONSE, and the controller with see that, get the IP address and try to add the node.
