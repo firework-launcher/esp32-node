@@ -12,6 +12,7 @@ Commands are sent in JSON. It is an object. The code key is the only required ke
 | 2    | Arm                 | This code does not have any payload.                                                                          |
 | 3    | Disarm              | This code does not have any payload.                                                                          |
 | 4    | Run step            | There are 2 arrays within the payload array. the first one being an array of all the pins, and the second one being an array for the PWM values with the indexes lining up with the pins. |
+| 5    | Enters OTA          | No payload                                                                                                    |
 
 ## Example
 
