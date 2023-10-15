@@ -145,7 +145,7 @@ bool wifi_init_sta(void)
     }
 }
 
-void setDisplay(int lastPart) {
+void setDisplay(int lastPart, int armPin) {
     int index = 0;
 
     while (lastPart > 0 && index < 4) {
@@ -153,7 +153,7 @@ void setDisplay(int lastPart) {
         lastPart /= 10;
         index++;
     }
-    set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], 0);
+    set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], armPin);
 }
 
 
@@ -182,7 +182,7 @@ void digit_display_thread(void) {
         
         if (token != NULL) {
             lastPart = atoi(token);
-            setDisplay(lastPart);
+            setDisplay(lastPart, 0);
         }
     }
 }

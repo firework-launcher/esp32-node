@@ -13,6 +13,7 @@ extern const uint8_t home_html_end[] asm("_binary_home_html_end");
 extern const uint8_t main_css_start[] asm("_binary_main_css_start");
 extern const uint8_t main_css_end[] asm("_binary_main_css_end");
 
+int node_id;
 
 esp_err_t home_get_handler(httpd_req_t *req)
 {
@@ -24,6 +25,14 @@ esp_err_t restart_get_handler(httpd_req_t *req)
 {
     esp_restart();
     const char resp[] = "OK";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+esp_err_t version_get_handler(httpd_req_t *req)
+{
+    const char resp[5];
+    sprintf(resp, "%d", version);
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
@@ -112,6 +121,35 @@ esp_err_t configure_wifissid_post_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+esp_err_t setdisplay_post_handler(httpd_req_t *req) {
+    char content[16];
+    int int_content[16];
+
+    /* Truncate if content length larger than the buffer */
+    size_t recv_size = MIN(req->content_len, sizeof(content));
+
+    int ret = httpd_req_recv(req, content, recv_size);
+    if (ret <= 0) {
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            httpd_resp_send_408(req);
+        }
+        return ESP_FAIL;
+    }
+    for (int i = 0; i < 16; i++) {
+        if (content[i] == 48) {
+            int_content[i] = 0;
+        } else {
+            int_content[i] = 1;
+        }
+    }
+    
+    write_dispboard_pca(int_content);
+
+    const char resp[] = "OK";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
 /*
  * Handle OTA file upload
  */
@@ -192,6 +230,14 @@ httpd_uri_t wificonfigurepasswd_post = {
     .user_ctx = NULL
 };
 
+httpd_uri_t setdisplay_post = {
+    .uri      = "/set_display",
+    .method   = HTTP_POST,
+    .handler  = setdisplay_post_handler,
+    .user_ctx = NULL
+};
+
+
 httpd_uri_t update_post = {
     .uri      = "/update",
     .method   = HTTP_POST,
@@ -206,6 +252,14 @@ httpd_uri_t restart_get = {
     .user_ctx = NULL
 };
 
+httpd_uri_t version_get = {
+    .uri      = "/version",
+    .method   = HTTP_GET,
+    .handler  = version_get_handler,
+    .user_ctx = NULL
+};
+
+
 static esp_err_t http_server_init(void)
 {
     static httpd_handle_t http_server = NULL;
@@ -219,6 +273,8 @@ static esp_err_t http_server_init(void)
         httpd_register_uri_handler(http_server, &restart_get);
         httpd_register_uri_handler(http_server, &wificonfiguressid_post);
         httpd_register_uri_handler(http_server, &wificonfigurepasswd_post);
+        httpd_register_uri_handler(http_server, &setdisplay_post);
+        httpd_register_uri_handler(http_server, &version_get);
     }
 
     return http_server == NULL ? ESP_FAIL : ESP_OK;
@@ -251,9 +307,11 @@ static esp_err_t softap_init(char wifi_ssid_ota[10])
 
 void flash_leds(void) {
     while (true) {
+        setDisplay(node_id, 1);
         ws2811_set_all(20, 0, 0);
         ws2811_set_leds();
         vTaskDelay(250 / portTICK_PERIOD_MS);
+        setDisplay(node_id, 0);
         ws2811_set_all(20, 20, 0);
         ws2811_set_leds();
         vTaskDelay(250 / portTICK_PERIOD_MS);
@@ -268,12 +326,14 @@ void start_led_flash_thread(pthread_attr_t attr) {
 
 void ota(pthread_attr_t attr) {
     if (wifi_connected != true) {
-        int node_id = random_number(1, 255);
+        node_id = random_number(1, 999);
         char wifi_ssid_ota[10];
         sprintf(wifi_ssid_ota, "Node %d", node_id);
-        setDisplay(node_id);
         start_led_flash_thread(attr);
         softap_init(wifi_ssid_ota);
+    } else {
+        ws2811_set_all(20, 20, 0);
+        ws2811_set_leds();
     }
     ESP_ERROR_CHECK(http_server_init());
 

@@ -134,7 +134,7 @@ void set_dispboard_pca(uint16_t digit2, uint16_t digit3, uint16_t digit1, uint16
             {0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0},
             {0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,0},
             {0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0},
+            {0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0},
             {0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0},
             {0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0}
         }
@@ -223,21 +223,33 @@ void waiting(void) {
     uint8_t pin = 0;
     while (rx_connected == false && tx_connected == false) {
         for (int i = 0; i < 16; i++) {
-            ws2811_set_rgb(i, 20, 0, 0);
-            ws2811_set_leds();
-            vTaskDelay(100 / portTICK_PERIOD_MS);
+            if (rx_connected == false && tx_connected == false) {
+                ws2811_set_rgb(i, 20, 0, 0);
+                ws2811_set_leds();
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+            } else {
+                break;
+            }
         }
         vTaskDelay(100 / portTICK_PERIOD_MS);
         for (int i = 0; i < 16; i++) {
-            ws2811_set_rgb(i, 0, 20, 0);
-            ws2811_set_leds();
-            vTaskDelay(100 / portTICK_PERIOD_MS);
+            if (rx_connected == false && tx_connected == false) {
+                ws2811_set_rgb(i, 0, 20, 0);
+                ws2811_set_leds();
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+            } else {
+                break;
+            }
         }
         vTaskDelay(100 / portTICK_PERIOD_MS);
         for (int i = 0; i < 16; i++) {
-            ws2811_set_rgb(i, 0, 0, 20);
-            ws2811_set_leds();
-            vTaskDelay(100 / portTICK_PERIOD_MS);
+            if (rx_connected == false && tx_connected == false) {
+                ws2811_set_rgb(i, 0, 0, 20);
+                ws2811_set_leds();
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+            } else {
+                break;
+            }
         }
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }

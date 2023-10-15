@@ -6,6 +6,7 @@ pthread_t tcprxthread;
 pthread_t tcptxthread;
 char* wifi_ssid = "Node";
 char* wifi_password = "Password";
+int version = 1;
 
 #include "esp_err.h"
 #include "tcp_io.h"
@@ -65,6 +66,7 @@ void tx_main(void) {
         root = cJSON_CreateObject();
 
         cJSON_AddNumberToObject(root, "signalStrength", get_signal_strength());
+        cJSON_AddNumberToObject(root, "version", version);
 
         read_data = read_bytes(0x20);
         cJSON_AddItemToObject(root, "inputData", read_data);
@@ -80,6 +82,7 @@ void tx_main(void) {
 
 void app_main(void)
 {
+    ESP_LOGI(TAG_LAUNCHER, "Version %d, starting..", version);
     init_gpio();
     init_nvs();
     pthread_attr_t attr;
