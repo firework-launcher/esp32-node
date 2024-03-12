@@ -14,12 +14,14 @@
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
-#include "fireworks.h"
 
 static const char *TAG_TCP_TX = "TCP TX";
 static const char *TAG_TCP_RX = "TCP RX";
 bool entering_ota = false;
 char msg_buffer_input[128];
+char recv_buffer[8192];
+
+#include "fireworks.h"
 
 static void tcp_inserver_thread(void)
 {
@@ -116,6 +118,14 @@ void process_rx_data(char rx_data[8192]) {
                 ESP_LOGI("OTA", "Shutting down everything and running OTA.");
                 entering_ota = true;
                 break;
+            case 6:
+                // Arm no lights
+                arm_no_lights();
+                break;
+            case 7:
+                // Disarm no lights
+                disarm_no_lights();
+                break;
             default:
                 ESP_LOGW(TAG_TCP_RX, "RX Client sent unknown code, ignoring.");
                 break;
@@ -131,7 +141,6 @@ static void tcp_outserver_thread(void)
     char addr_str[128];
     int addr_family;
     int ip_protocol;
-    char recv_buffer[8192];
     int len;
 
     while (1) {

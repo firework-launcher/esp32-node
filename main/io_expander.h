@@ -222,6 +222,9 @@ void all_on(uint8_t address) {
 void waiting(void) {
     uint8_t pin = 0;
     while (rx_connected == false && tx_connected == false) {
+        if (entering_ota) {
+            break;
+        }
         for (int i = 0; i < 16; i++) {
             if (rx_connected == false && tx_connected == false) {
                 ws2811_set_rgb(i, 20, 0, 0);
@@ -266,9 +269,19 @@ void arm(void) {
     ws2811_set_leds();
 }
 
+void arm_no_lights(void) {
+    armed = true;
+    gpio_set_level(4, 1);
+}
+
 void disarm(void) {
     armed = false;
     leds_stopped = false;
     gpio_set_level(4, 0);
     set_dispboard_pca(ip_digits[2], ip_digits[1], ip_digits[0], 0);
+}
+
+void disarm_no_lights(void) {
+    armed = false;
+    gpio_set_level(4, 0);
 }

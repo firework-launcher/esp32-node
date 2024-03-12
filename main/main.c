@@ -6,7 +6,7 @@ pthread_t tcprxthread;
 pthread_t tcptxthread;
 char* wifi_ssid = "Node";
 char* wifi_password = "Password";
-int version = 1;
+int version = 2;
 
 #include "esp_err.h"
 #include "tcp_io.h"
@@ -99,6 +99,7 @@ void app_main(void)
         entering_ota = true;
         ota(attr);
     }
+    ESP_ERROR_CHECK(http_server_init());
     start_tcptx_thread(attr);
     start_tcprx_thread(attr);
     start_discovery_thread(attr);

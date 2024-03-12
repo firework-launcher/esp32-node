@@ -11,13 +11,10 @@
             <li class="navbar-item-li"><a class="navbar-item" href="/advanced">Advanced</a></li>
         </ul>
         <div style="text-align: center">
-            <h1>Settings</h1>
-            <h2>WiFi Configuration</h2>
-            <p>SSID <input type="text" id="ssid"></p>
-            <p>Password <input type="password" id="passwd"></p>
-            <br/>
-            <button class="firework_button" onclick="send()">Save & Restart</button>
-            <a class="firework_button" href="/advanced">Advanced Settings</a>
+            <h1>Advanced Settings</h1>
+            <h2>Run Command</h2>
+            <p>JSON Command <input type="text" id="cmd"></p>
+            <button class="firework_button" onclick="send()">Execute</button>
         </div>
         <script>
             function send_data(path, data) {
@@ -32,10 +29,7 @@
                 http.send(data);
             }
             function send() {
-                send_data("/configure_wifi_ssid", document.getElementById("ssid").value);
-                send_data("/configure_wifi_passwd", document.getElementById("passwd").value);
-                document.getElementById("ssid").value = "";
-                document.getElementById("passwd").value = "";
+                send_data("/run_command", document.getElementById("cmd").value);
             }
         </script>
     </body>

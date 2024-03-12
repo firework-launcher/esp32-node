@@ -348,15 +348,6 @@ h5 {
 }
 
 @media screen and (max-width: 720px) {
-    .navbar-item {
-        display: none;
-    }
-    .hamburger-menu {
-        display: block;
-    }
-    .navtitle {
-        padding: 18px 16px;
-    }
     .modal {
         height: 45%;
         width: 70%;

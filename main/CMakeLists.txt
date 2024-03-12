@@ -7,5 +7,5 @@ set(COMPONENT_ADD_INCLUDEDIRS "")
 
 idf_component_register(SRCS "main.c"
 	INCLUDE_DIRS "."
-	EMBED_TXTFILES web/home.html web/static/main.css
+	EMBED_TXTFILES web/home.html web/static/main.css web/advanced.html
 )

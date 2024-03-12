@@ -10,14 +10,25 @@
 extern const uint8_t home_html_start[] asm("_binary_home_html_start");
 extern const uint8_t home_html_end[] asm("_binary_home_html_end");
 
+extern const uint8_t advanced_html_start[] asm("_binary_advanced_html_start");
+extern const uint8_t advanced_html_end[] asm("_binary_advanced_html_end");
+
 extern const uint8_t main_css_start[] asm("_binary_main_css_start");
 extern const uint8_t main_css_end[] asm("_binary_main_css_end");
+
+static httpd_handle_t http_server = NULL;
 
 int node_id;
 
 esp_err_t home_get_handler(httpd_req_t *req)
 {
     httpd_resp_send(req, (const char *) home_html_start, home_html_end - home_html_start);
+    return ESP_OK;
+}
+
+esp_err_t advanced_get_handler(httpd_req_t *req)
+{
+    httpd_resp_send(req, (const char *) advanced_html_start, advanced_html_end - advanced_html_start);
     return ESP_OK;
 }
 
@@ -121,6 +132,26 @@ esp_err_t configure_wifissid_post_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+esp_err_t run_command_post_handler(httpd_req_t *req) {
+    char content[100];
+
+    /* Truncate if content length larger than the buffer */
+    size_t recv_size = MIN(req->content_len, sizeof(content));
+
+    int ret = httpd_req_recv(req, content, recv_size);
+    if (ret <= 0) {
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            httpd_resp_send_408(req);
+        }
+        return ESP_FAIL;
+    }
+    strcpy(recv_buffer, content);
+    process_rx_data(recv_buffer);
+    const char resp[] = "OK";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
 esp_err_t setdisplay_post_handler(httpd_req_t *req) {
     char content[16];
     int int_content[16];
@@ -209,6 +240,13 @@ httpd_uri_t home_get = {
     .user_ctx = NULL
 };
 
+httpd_uri_t advanced_get = {
+    .uri      = "/advanced",
+    .method   = HTTP_GET,
+    .handler  = advanced_get_handler,
+    .user_ctx = NULL
+};
+
 httpd_uri_t maincss_get = {
     .uri      = "/static/main.css",
     .method   = HTTP_GET,
@@ -245,6 +283,13 @@ httpd_uri_t update_post = {
     .user_ctx = NULL
 };
 
+httpd_uri_t run_command_post = {
+    .uri      = "/run_command",
+    .method   = HTTP_POST,
+    .handler  = run_command_post_handler,
+    .user_ctx = NULL
+};
+
 httpd_uri_t restart_get = {
     .uri      = "/restart",
     .method   = HTTP_GET,
@@ -262,17 +307,19 @@ httpd_uri_t version_get = {
 
 static esp_err_t http_server_init(void)
 {
-    static httpd_handle_t http_server = NULL;
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
+    config.max_uri_handlers = 15;
+
     if (httpd_start(&http_server, &config) == ESP_OK) {
         httpd_register_uri_handler(http_server, &home_get);
+        httpd_register_uri_handler(http_server, &advanced_get);
         httpd_register_uri_handler(http_server, &maincss_get);
-        httpd_register_uri_handler(http_server, &update_post);
         httpd_register_uri_handler(http_server, &restart_get);
         httpd_register_uri_handler(http_server, &wificonfiguressid_post);
         httpd_register_uri_handler(http_server, &wificonfigurepasswd_post);
+        httpd_register_uri_handler(http_server, &run_command_post);
         httpd_register_uri_handler(http_server, &setdisplay_post);
         httpd_register_uri_handler(http_server, &version_get);
     }
@@ -331,19 +378,20 @@ void ota(pthread_attr_t attr) {
         sprintf(wifi_ssid_ota, "Node %d", node_id);
         start_led_flash_thread(attr);
         softap_init(wifi_ssid_ota);
+        ESP_ERROR_CHECK(http_server_init());
     } else {
         ws2811_set_all(20, 20, 0);
         ws2811_set_leds();
-    }
-    ESP_ERROR_CHECK(http_server_init());
+        httpd_register_uri_handler(http_server, &update_post);
 
-    const esp_partition_t *partition = esp_ota_get_running_partition();
-    printf("Currently running partition: %s\r\n", partition->label);
+        const esp_partition_t *partition = esp_ota_get_running_partition();
+        printf("Currently running partition: %s\r\n", partition->label);
 
-    esp_ota_img_states_t ota_state;
-    if (esp_ota_get_state_partition(partition, &ota_state) == ESP_OK) {
-        if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
-            esp_ota_mark_app_valid_cancel_rollback();
+        esp_ota_img_states_t ota_state;
+        if (esp_ota_get_state_partition(partition, &ota_state) == ESP_OK) {
+            if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
+                esp_ota_mark_app_valid_cancel_rollback();
+            }
         }
     }
 
