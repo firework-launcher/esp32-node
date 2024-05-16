@@ -126,6 +126,7 @@ esp_err_t configure_wifissid_post_handler(httpd_req_t *req) {
         }
         return ESP_FAIL;
     }
+    content[ret] = '\0';  // Null terminate the received data
     set_nvs_keyvalue("ssid", content);
     const char resp[] = "OK";
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
