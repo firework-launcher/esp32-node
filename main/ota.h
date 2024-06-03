@@ -49,6 +49,14 @@ esp_err_t spiffs_file_handler(httpd_req_t *req) {
         strcat(filepath, "/index.html"); // Default to index.html if accessing root directory
     } else {
         strcat(filepath, req->uri);
+        if (stat(filepath, &file_stat) == -1) {
+            strcat(filepath, ".html");
+            if (stat(filepath, &file_stat) == -1) {
+                strcpy(filepath, "/spiffs");
+                strcat(filepath, req->uri);
+                strcat(filepath, "/index.html");
+            }
+        }
     }
 
     if (strcmp(req->uri, "/version") == 0) {
