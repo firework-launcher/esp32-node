@@ -6,29 +6,60 @@
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <sys/param.h>
-
-extern const uint8_t home_html_start[] asm("_binary_home_html_start");
-extern const uint8_t home_html_end[] asm("_binary_home_html_end");
-
-extern const uint8_t advanced_html_start[] asm("_binary_advanced_html_start");
-extern const uint8_t advanced_html_end[] asm("_binary_advanced_html_end");
-
-extern const uint8_t main_css_start[] asm("_binary_main_css_start");
-extern const uint8_t main_css_end[] asm("_binary_main_css_end");
+#include "esp_vfs.h"
+#include "esp_spiffs.h"
+#include <sys/stat.h>
 
 static httpd_handle_t http_server = NULL;
 
 int node_id;
 
-esp_err_t home_get_handler(httpd_req_t *req)
-{
-    httpd_resp_send(req, (const char *) home_html_start, home_html_end - home_html_start);
-    return ESP_OK;
+const char* get_mime_type(const char* filename) {
+    if (strstr(filename, ".html")) return "text/html";
+    if (strstr(filename, ".css")) return "text/css";
+    if (strstr(filename, ".js")) return "application/javascript";
+    if (strstr(filename, ".jpg")) return "image/jpeg";
+    if (strstr(filename, ".png")) return "image/png";
+    return "text/plain";  // default MIME type
 }
 
-esp_err_t advanced_get_handler(httpd_req_t *req)
-{
-    httpd_resp_send(req, (const char *) advanced_html_start, advanced_html_end - advanced_html_start);
+esp_err_t spiffs_file_handler(httpd_req_t *req) {
+    char filepath[ESP_VFS_PATH_MAX + 128];
+    struct stat file_stat;
+
+    // Construct the file path
+    strcpy(filepath, "/spiffs");
+    if (req->uri[strlen(req->uri) - 1] == '/') {
+        strcat(filepath, "index.html"); // Default to index.html if accessing root directory
+    } else {
+        strcat(filepath, req->uri);
+    }
+
+    // Check if the file exists
+    if (stat(filepath, &file_stat) == -1) {
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+
+    // Open the file
+    FILE *file = fopen(filepath, "r");
+    if (!file) {
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+
+    // Fetch the MIME type based on file extension if needed
+    const char* mime_type = get_mime_type(filepath);
+    httpd_resp_set_type(req, mime_type);
+
+    // Send file content
+    char *buffer = malloc(file_stat.st_size);
+    fread(buffer, 1, file_stat.st_size, file);
+    httpd_resp_send(req, buffer, file_stat.st_size);
+
+    // Clean up
+    free(buffer);
+    fclose(file);
     return ESP_OK;
 }
 
@@ -45,13 +76,6 @@ esp_err_t version_get_handler(httpd_req_t *req)
     const char resp[5];
     sprintf(resp, "%d", version);
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
-    return ESP_OK;
-}
-
-esp_err_t maincss_get_handler(httpd_req_t *req)
-{
-    httpd_resp_set_type(req, "text/css");
-    httpd_resp_send(req, (const char *) main_css_start, main_css_end - main_css_start);
     return ESP_OK;
 }
 
@@ -230,28 +254,62 @@ esp_err_t update_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+esp_err_t write_flash_post_handler(httpd_req_t *req)
+{
+    char buf[1000];
+    esp_ota_handle_t ota_handle;
+    int remaining = req->content_len;
+
+    size_t offset = 0x8000;
+    
+
+    const esp_partition_t *ota_partition = esp_ota_get_next_update_partition(NULL);
+    ESP_ERROR_CHECK(esp_ota_begin(ota_partition, OTA_SIZE_UNKNOWN, &ota_handle));
+
+    while (remaining > 0) {
+        int recv_len = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)));
+
+        // Timeout Error: Just retry
+        if (recv_len == HTTPD_SOCK_ERR_TIMEOUT) {
+            continue;
+
+        // Serious Error: Abort OTA
+        } else if (recv_len <= 0) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Protocol Error");
+            return ESP_FAIL;
+        }
+
+        // Successful Upload: Flash firmware chunk
+        if (esp_ota_write(ota_handle, (const void *)buf, recv_len) != ESP_OK) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Flash Error");
+            return ESP_FAIL;
+        }
+
+        remaining -= recv_len;
+    }
+
+    // Validate and switch to new OTA image and reboot
+    if (esp_ota_end(ota_handle) != ESP_OK || esp_ota_set_boot_partition(ota_partition) != ESP_OK) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Validation / Activation Error");
+            return ESP_FAIL;
+    }
+
+    httpd_resp_sendstr(req, "Firmware update complete, rebooting now!\n");
+
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+    esp_restart();
+
+    return ESP_OK;
+}
+
 /*
  * HTTP Server
  */
 
-httpd_uri_t home_get = {
-    .uri      = "/",
+httpd_uri_t spiffs_handler = {
+    .uri      = "/*",  // Handle any path
     .method   = HTTP_GET,
-    .handler  = home_get_handler,
-    .user_ctx = NULL
-};
-
-httpd_uri_t advanced_get = {
-    .uri      = "/advanced",
-    .method   = HTTP_GET,
-    .handler  = advanced_get_handler,
-    .user_ctx = NULL
-};
-
-httpd_uri_t maincss_get = {
-    .uri      = "/static/main.css",
-    .method   = HTTP_GET,
-    .handler  = maincss_get_handler,
+    .handler  = spiffs_file_handler,
     .user_ctx = NULL
 };
 
@@ -284,6 +342,13 @@ httpd_uri_t update_post = {
     .user_ctx = NULL
 };
 
+httpd_uri_t write_flash_post = {
+    .uri      = "/write_flash",
+    .method   = HTTP_POST,
+    .handler  = write_flash_post_handler,
+    .user_ctx = NULL
+};
+
 httpd_uri_t run_command_post = {
     .uri      = "/run_command",
     .method   = HTTP_POST,
@@ -305,18 +370,28 @@ httpd_uri_t version_get = {
     .user_ctx = NULL
 };
 
-
 static esp_err_t http_server_init(void)
 {
+    esp_vfs_spiffs_conf_t conf = {
+        .base_path = "/spiffs",
+        .partition_label = "spiffs",
+        .max_files = 100,
+        .format_if_mount_failed = false
+    };
+
+    // Mount SPIFFS file system
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    if (ret != ESP_OK) {
+        ESP_LOGE("SPIFFS", "Could not mount SPIFFS filesystem");
+        return NULL;
+    }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
     config.max_uri_handlers = 15;
 
     if (httpd_start(&http_server, &config) == ESP_OK) {
-        httpd_register_uri_handler(http_server, &home_get);
-        httpd_register_uri_handler(http_server, &advanced_get);
-        httpd_register_uri_handler(http_server, &maincss_get);
+        httpd_register_uri_handler(http_server, &spiffs_handler);
         httpd_register_uri_handler(http_server, &restart_get);
         httpd_register_uri_handler(http_server, &wificonfiguressid_post);
         httpd_register_uri_handler(http_server, &wificonfigurepasswd_post);
@@ -384,6 +459,7 @@ void ota(pthread_attr_t attr) {
         ws2811_set_all(20, 20, 0);
         ws2811_set_leds();
         httpd_register_uri_handler(http_server, &update_post);
+        httpd_register_uri_handler(http_server, &write_flash_post);
 
         const esp_partition_t *partition = esp_ota_get_running_partition();
         printf("Currently running partition: %s\r\n", partition->label);

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="settings_content" id="profilelist">
+    <h1>Profiles</h1>
+    <h2>Launcher Name (launcherid)</h2>
+    <p class="error" id="error" style="display: none">There has to be at least one profile.</p>
+    <h2 id="profile_1" style="color: #ff0000;"><div style="display: inline" id="profiletext_1">Profile Name</div>
+        <button class="firework_button" id="edit_1" onclick="edit_profile('1')">Edit</button>
+        <button class="firework_button" id="remove_1" onclick="remove_profile('1')">Remove</button>
+    </h2>
+    <button class="firework_button" id="addprofilebutton" onclick="add_profile()">Add Profile</a>
+</div>
+<div class="settings_content" style="display: none;" id="profileeditor">
+  <h1>Profiles</h1>
+  <h2 id="profilename"></h2>
+  <p>Color: <input type="color" id="colorselector"></p>
+  <p style="display: none">Power to igniter: <span id="pwm_slider_percentage"></span></p><input style="display: none" type="range" min="0" max="7500" id="pwm_slider">
+  <p>Name: <input type="text" id="nameinput"></p>
+  <button class="firework_button" id="savebutton">Save</button>
+  <button class="firework_button" onclick="exit_editor()">Back</button>
+</div>
+<script>
+    var launcher = "launcherid";
+</script>
+<script src="/js/fetchvars.js"></script>
+<script>fetch_variables("/js/editprofiles.js")</script>
+
+{% endblock %}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <link href="/css/main.css" rel="stylesheet">
+    <link href="/branding.css" rel="stylesheet">
+    <title>{{ name }}</title>
+  </head>
+  <body>
+    <ul class="navbar">
+      <li class="navbar-item-li"><a class="navtitle" href="/">{{ name }}</a></li>
+        <li class="navbar-item-li"><a class="navbar-item" onclick="dev();" id="devbutton">Profiles</a></li>
+        <li class="navbar-item-li"><a class="navbar-item" onclick="arm_all()" id="armbutton">Arm all</a></li>
+        <li class="navbar-item-li"><a class="navbar-item" onclick="disarm_all()" id="disarmbutton">Disarm all</a></li>
+        <li class="navbar-item-li"><a class="navbar-item" onclick="manage_labels()" id="labelsbutton">Labels</a></li>
+        <li class="navbar-item-li"><a class="navbar-item" href="/settings">Settings</a></li>
+        <li class="navbar-item-li"><a class="navbar-item" href="/sequences">Sequences</a></li>
+      <li class="navbar-item-hamburger"><a class="hamburger-menu" onclick="expand_hamburger()"><img src="/svgs/bars.svg" width="20" class="hamburger-menu-svg" alt="Hamburger Menu"/></a></li>
+    </ul>
+    <div id="hamburgerExpandMenu">
+        <a class="navbar-item-expanded" onclick="dev();" id="devbutton_">Profiles</a>
+        <a class="navbar-item-expanded" onclick="reset_all()" id="resetbutton_">Reset all</a>
+        <a class="navbar-item-expanded" onclick="arm_all()" id="armbutton_">Arm all</a>
+        <a class="navbar-item-expanded" onclick="disarm_all()" id="disarmbutton_">Disarm all</a>
+        <a class="navbar-item-expanded" onclick="manage_labels()" id="labelsbutton_">Labels</a>
+        <a class="navbar-item-expanded" href="/settings">Settings</a>
+        <a class="navbar-item-expanded" href="/sequences">Sequences</a>
+    </div>
+    <div id="node_warn_crash" class="warn_msg">
+      <p id="node_warn_crash_txt" style="margin: 0; color: black;"></p>
+    </div>
+    <div class="content" id="content">
+      <div id="launchers"></div>
+      <div class="legend" id="legend">
+        <h2>Legend</h2>
+      </div>
+    </div>
+    <div class="modal" id="modal">
+      <div class="inner-modal">
+        <h3 style="margin-top: 0;" id="launcher-indicator"></h3>
+        <h3 id="firework-indicator"></h3>
+        <p id="special_characters" style="display: none">Please do not use special characters</p>
+        <input placeholder="Label" class="label_box" type="text" id="label_content">
+        <div class="modal-button">
+          <button class="firework_button" onclick="add_label()">Add</button>
+          <button class="firework_button" onclick="close_modal()">Close</button>
+        </div>
+      </div>
+    </div>
+    <script src="/js/fetchvars.js"></script>
+    <script>
+      fetch_variables("/js/main.js")
+    </script>
+  </body>
+</html>

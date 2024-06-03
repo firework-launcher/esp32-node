@@ -1,3 +1,4 @@
 /build
-/__pycache__
-/sdkconfig
+__pycache__
+sdkconfig*
+/main/web/rendered

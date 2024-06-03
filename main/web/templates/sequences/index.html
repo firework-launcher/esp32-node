@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div id="error" class="error_msg">
+    <p id="error_text"></p>
+</div>
+<div class="sequencelist">
+    {% for sequence in sequences %}
+        <div id="sequence_{{ sequence }}">
+            <h1 id="h1sequence_{{ sequence }}">{{ sequence }} 
+                <button class="firework_button" id="run_{{ sequence }}" onclick="run_sequence('{{ sequence }}')">Run</button>
+                <button class="firework_button" id="delete_{{ sequence }}" onclick="delete_sequence('{{ sequence }}')">Delete</button>
+                <button class="firework_button" id="edit_{{ sequence }}" onclick="edit_sequence('{{ sequence }}')">Edit</button>
+                <button class="firework_button" id="firenow_{{ sequence }}" onclick="firenow('{{ sequence }}')" style="display: none">Skip Delay</button>
+                <a class="firework_button" href="/visualize/{{ sequence }}">Visualize</a>
+            </h1><br/>
+        </div>
+    {% endfor %}
+    <a class="firework_button" href="/builder">Add Sequence</a>
+</div>
+<script src="/js/socketio.js"></script>
+<script src="/js/sequences.js"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="settings_content">
+    <h1>Node Name (nodeid)</h1>
+    <h2>Firmware version: 1234</h2>
+    <button class="firework_button" id="reboot" onclick="reboot()">Reboot</a>
+    <button class="firework_button" id="configure" onclick="configure()">Configure</a>
+    <button class="firework_button" id="remove" onclick="remove_node()">Remove</a>
+</div>
+<script>
+    node_port = "nodeid";
+    node_version = "1234";
+</script>
+<script src="/js/manage_node.js"></script>
+{% endblock %}

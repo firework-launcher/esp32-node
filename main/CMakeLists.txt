@@ -7,5 +7,6 @@ set(COMPONENT_ADD_INCLUDEDIRS "")
 
 idf_component_register(SRCS "main.c"
 	INCLUDE_DIRS "."
-	EMBED_TXTFILES web/home.html web/static/main.css web/advanced.html
 )
+
+spiffs_create_partition_image(spiffs web/rendered FLASH_IN_PROJECT)
