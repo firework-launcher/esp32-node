@@ -30,7 +30,7 @@ esp_err_t spiffs_file_handler(httpd_req_t *req) {
     // Construct the file path
     strcpy(filepath, "/spiffs");
     if (req->uri[strlen(req->uri) - 1] == '/') {
-        strcat(filepath, "index.html"); // Default to index.html if accessing root directory
+        strcat(filepath, "/index.html"); // Default to index.html if accessing root directory
     } else {
         strcat(filepath, req->uri);
     }
@@ -385,10 +385,12 @@ static esp_err_t http_server_init(void)
         ESP_LOGE("SPIFFS", "Could not mount SPIFFS filesystem");
         return NULL;
     }
+    ESP_LOGI("SPIFFS", "Mounted SPIFFS filesystem");
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
     config.max_uri_handlers = 15;
+    config.uri_match_fn = httpd_uri_match_wildcard;
 
     if (httpd_start(&http_server, &config) == ESP_OK) {
         httpd_register_uri_handler(http_server, &spiffs_handler);
