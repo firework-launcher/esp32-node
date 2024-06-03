@@ -20,6 +20,7 @@ const char* get_mime_type(const char* filename) {
     if (strstr(filename, ".js")) return "application/javascript";
     if (strstr(filename, ".jpg")) return "image/jpeg";
     if (strstr(filename, ".png")) return "image/png";
+    if (strstr(filename, ".svg")) return "image/svg+xml";
     return "text/plain";  // default MIME type
 }
 
