@@ -2,6 +2,8 @@ import shutil
 import os
 import jinja2
 
+os.makedirs('rendered', exist_ok=True)
+
 folder = 'rendered'
 for filename in os.listdir(folder):
     file_path = os.path.join(folder, filename)
