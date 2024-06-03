@@ -23,6 +23,22 @@ const char* get_mime_type(const char* filename) {
     return "text/plain";  // default MIME type
 }
 
+esp_err_t version_get_handler(httpd_req_t *req)
+{
+    const char resp[5];
+    sprintf(resp, "%d", version);
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+esp_err_t restart_get_handler(httpd_req_t *req)
+{
+    esp_restart();
+    const char resp[] = "OK";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
 esp_err_t spiffs_file_handler(httpd_req_t *req) {
     char filepath[ESP_VFS_PATH_MAX + 128];
     struct stat file_stat;
@@ -33,6 +49,12 @@ esp_err_t spiffs_file_handler(httpd_req_t *req) {
         strcat(filepath, "/index.html"); // Default to index.html if accessing root directory
     } else {
         strcat(filepath, req->uri);
+    }
+
+    if (strcmp(req->uri, "/version") == 0) {
+        return version_get_handler(req);
+    } else if (strcmp(req->uri, "/restart") == 0) {
+        return restart_get_handler(req);
     }
 
     // Check if the file exists
@@ -60,22 +82,6 @@ esp_err_t spiffs_file_handler(httpd_req_t *req) {
     // Clean up
     free(buffer);
     fclose(file);
-    return ESP_OK;
-}
-
-esp_err_t restart_get_handler(httpd_req_t *req)
-{
-    esp_restart();
-    const char resp[] = "OK";
-    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
-    return ESP_OK;
-}
-
-esp_err_t version_get_handler(httpd_req_t *req)
-{
-    const char resp[5];
-    sprintf(resp, "%d", version);
-    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
@@ -301,20 +307,6 @@ httpd_uri_t run_command_post = {
     .user_ctx = NULL
 };
 
-httpd_uri_t restart_get = {
-    .uri      = "/restart",
-    .method   = HTTP_GET,
-    .handler  = restart_get_handler,
-    .user_ctx = NULL
-};
-
-httpd_uri_t version_get = {
-    .uri      = "/version",
-    .method   = HTTP_GET,
-    .handler  = version_get_handler,
-    .user_ctx = NULL
-};
-
 static esp_err_t http_server_init(void)
 {
     esp_vfs_spiffs_conf_t conf = {
@@ -339,12 +331,10 @@ static esp_err_t http_server_init(void)
 
     if (httpd_start(&http_server, &config) == ESP_OK) {
         httpd_register_uri_handler(http_server, &spiffs_handler);
-        httpd_register_uri_handler(http_server, &restart_get);
         httpd_register_uri_handler(http_server, &wificonfiguressid_post);
         httpd_register_uri_handler(http_server, &wificonfigurepasswd_post);
         httpd_register_uri_handler(http_server, &run_command_post);
         httpd_register_uri_handler(http_server, &setdisplay_post);
-        httpd_register_uri_handler(http_server, &version_get);
     }
 
     return http_server == NULL ? ESP_FAIL : ESP_OK;
