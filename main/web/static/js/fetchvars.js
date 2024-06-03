@@ -35,12 +35,12 @@ function makeNewProfile(count) {
     return profile;
 }
 
-function esp_fetch(endpoint, data={}) {
+function esp_fetch(launcher, endpoint, data={}) {
     if (!data.headers) {
         data.headers = {};
     }
     data.headers["Content-Type"] = "application/json";
-    return fetch("http://" + "192.168.3.57" + endpoint, data);
+    return fetch("http://" + launcher + endpoint, data);
 }
 
 function generateNewData() {

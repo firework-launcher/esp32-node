@@ -65,7 +65,7 @@ function trigger_firework(firework, launcher) {
     if (fireworks_launched[launcher] != undefined) {
         if (launchers_armed[launcher]) {
             pwm = firework_profiles[launcher][get_profile_id(launcher, firework)].pwm;
-            esp_fetch("/run_command", {
+            esp_fetch(launcher, "/run_command", {
                 method: "post",
                 body: JSON.stringify({"code": 1, "payload": [firework, pwm]})
             });
@@ -92,7 +92,7 @@ function reset_all() {
 
 function arm(launcher) {
     if (launchers.includes(launcher)) {
-        esp_fetch("/run_command", {
+        esp_fetch(launcher, "/run_command", {
             method: "post",
             body: JSON.stringify({"code": 6})
         });
@@ -111,7 +111,7 @@ function arm(launcher) {
 
 function disarm(launcher) {
     if (launchers.includes(launcher)) {
-        esp_fetch("/run_command", {
+        esp_fetch(launcher, "/run_command", {
             method: "post",
             body: JSON.stringify({"code": 7})
         });
