@@ -9,4 +9,6 @@ idf_component_register(SRCS "main.c"
 	INCLUDE_DIRS "."
 )
 
-spiffs_create_partition_image(spiffs web/rendered FLASH_IN_PROJECT)
+add_custom_target(dep COMMAND cd ../../../main/web && python3 compile.py)
+
+spiffs_create_partition_image(spiffs web/rendered FLASH_IN_PROJECT DEPENDS dep)
