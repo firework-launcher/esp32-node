@@ -93,8 +93,15 @@ void process_rx_data(char rx_data[8192]) {
     cJSON *payload;
     if (json != 0) {
         int code = cJSON_GetObjectItem(json, "code")->valueint;
-        ESP_LOGI(TAG_TCP_RX, "Recieved code %d", cJSON_GetObjectItem(json, "code")->valueint);
+        if (code != 0) {
+            ESP_LOGI(TAG_TCP_RX, "Recieved code %d", cJSON_GetObjectItem(json, "code")->valueint);
+        }
+        rx_connected = true;
+        tx_connected = true;
         switch (cJSON_GetObjectItem(json, "code")->valueint) {
+            case 0:
+                // Do nothing
+                break;
             case 1:
                 // Trigger Firework
                 payload = cJSON_GetObjectItem(json, "payload");
@@ -117,14 +124,6 @@ void process_rx_data(char rx_data[8192]) {
                 // OTA
                 ESP_LOGI("OTA", "Shutting down everything and running OTA.");
                 entering_ota = true;
-                break;
-            case 6:
-                // Arm no lights
-                arm_no_lights();
-                break;
-            case 7:
-                // Disarm no lights
-                disarm_no_lights();
                 break;
             default:
                 ESP_LOGW(TAG_TCP_RX, "RX Client sent unknown code, ignoring.");

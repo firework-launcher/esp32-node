@@ -187,8 +187,14 @@ esp_err_t run_command_post_handler(httpd_req_t *req) {
     }
     strcpy(recv_buffer, content);
     process_rx_data(recv_buffer);
-    const char resp[] = "OK";
-    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    while (true) {
+        if (strcmp(msg_buffer_input, "") != 0) {
+            httpd_resp_send(req, msg_buffer_input, HTTPD_RESP_USE_STRLEN);
+            strcpy(msg_buffer_input, "");
+            break;
+        }
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
     return ESP_OK;
 }
 

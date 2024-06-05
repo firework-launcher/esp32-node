@@ -65,10 +65,7 @@ function trigger_firework(firework, launcher) {
     if (fireworks_launched[launcher] != undefined) {
         if (launchers_armed[launcher]) {
             pwm = firework_profiles[launcher][get_profile_id(launcher, firework)].pwm;
-            esp_fetch(launcher, "/run_command", {
-                method: "post",
-                body: JSON.stringify({"code": 1, "payload": [firework, pwm]})
-            });
+            esp_fetch(launcher, JSON.stringify({"code": 1, "payload": [firework, pwm]}));
             set_btn_red(launcher, firework);
             root.fireworks_launched[launcher].push(firework);
             fireworks_launched[launcher].push(firework);
@@ -92,10 +89,7 @@ function reset_all() {
 
 function arm(launcher) {
     if (launchers.includes(launcher)) {
-        esp_fetch(launcher, "/run_command", {
-            method: "post",
-            body: JSON.stringify({"code": 6})
-        });
+        esp_fetch(launcher, JSON.stringify({"code": 2}));
         armbutton = document.getElementById("armbutton_" + launcher);
         disarmbutton = document.getElementById("disarmbutton_" + launcher);
         armbutton.setAttribute("style", "display: none");
@@ -111,10 +105,7 @@ function arm(launcher) {
 
 function disarm(launcher) {
     if (launchers.includes(launcher)) {
-        esp_fetch(launcher, "/run_command", {
-            method: "post",
-            body: JSON.stringify({"code": 7})
-        });
+        esp_fetch(launcher, JSON.stringify({"code": 3}));
         armbutton = document.getElementById("armbutton_" + launcher);
         disarmbutton = document.getElementById("disarmbutton_" + launcher);
         armbutton.setAttribute("style", "");
@@ -508,3 +499,5 @@ for (let i = 0; i < Object.keys(root["launcher_data"]["names"]).length; i++) {
         "port": Object.keys(root["launcher_data"]["names"])[i]
     });
 }
+
+setInterval(update_channels_connected, 500);

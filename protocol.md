@@ -8,6 +8,7 @@ Commands are sent in JSON. It is an object. The code key is the only required ke
 
 | Code | Meaning             | Additional information                                                                                        |
 |------|---------------------|---------------------------------------------------------------------------------------------------------------|
+| 0    | Do nothing          | Meant to be used with the HTTP API. When the controller has nothing to send but wants an update from the node |
 | 1    | Trigger Firework    | For the payload, first number would be the firework to launch, and the second number would be the PWM to use. |
 | 2    | Arm                 | This code does not have any payload. Will lock up web gui if ran in Advanced Settings and not connected to a controller. |
 | 3    | Disarm              | This code does not have any payload.                                                                          |
