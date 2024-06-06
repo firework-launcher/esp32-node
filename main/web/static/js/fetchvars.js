@@ -1,5 +1,6 @@
 var root = {};
 const mappings = [4, 3, 2, 1, 8, 7, 6, 5, 12, 11, 10, 9, 16, 15, 14, 13];
+var esp_discovered = [];
 
 function makeNewProfile(count) {
     firework_list = []
@@ -72,7 +73,22 @@ function convertInputs(inputs) {
 }
 
 function update_esp_data(launcher, data) {
-    channels_connected = convertInputs(data.inputData)
+    channels_connected = convertInputs(data.inputData);
+    for (let i = 0; i < data.discovered.length; i++) {
+        if (!(esp_discovered.includes(data.discovered[i])) && !(data.discovered[i] == window.location.hostname)) {
+            count = 16
+            new_launcher = data.discovered[i];
+            esp_discovered.push(new_launcher);
+            fireworks_launched[new_launcher] = [];
+            root.firework_profiles[new_launcher] = makeNewProfile(count);
+            root.launcher_data.armed[new_launcher] = false;
+            root.launcher_data.channels_connected[new_launcher] = [];
+            root.launcher_data.counts[new_launcher] = count;
+            root.launcher_data.names[new_launcher] = "Node " + new_launcher.split('.')[3];
+            root.launchers.push(new_launcher);
+            root.discovered.push(new_launcher);
+        }
+    }
     root.launcher_data.channels_connected[launcher] = channels_connected
 }
 
@@ -106,10 +122,11 @@ function generateNewData() {
         "names": {}
     }
     root["launcher_data"]["armed"][window.location.hostname] = false;
-    root["launcher_data"]["channels_connected"][window.location.hostname] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+    root["launcher_data"]["channels_connected"][window.location.hostname] = [];
     root["launcher_data"]["counts"][window.location.hostname] = count;
-    root["launcher_data"]["names"][window.location.hostname] = "Node";
+    root["launcher_data"]["names"][window.location.hostname] = "Node " + window.location.hostname.split('.')[3];
     root["launchers"] = [window.location.hostname];
+    root["discovered"] = [];
     root["sequences"] = {};
 }
 

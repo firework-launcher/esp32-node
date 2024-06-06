@@ -11,6 +11,16 @@ sequences = root["sequences"];
 managing_labels = false;
 devmode = false;
 
+function check_for_discovered() {
+    for (let i = 0; i < root.discovered.length; i++) {
+        add_node({
+            name: root.launcher_data.names[root.discovered[i]],
+            port: root.discovered[i]
+        });
+    }
+    root.discovered = [];
+}
+
 function update_channels_connected() {
     if (!(managing_labels) && !(devmode)) {
         for (i = 0; i < Object.keys(launcher_channels_connected).length; i++) {
@@ -501,3 +511,4 @@ for (let i = 0; i < Object.keys(root["launcher_data"]["names"]).length; i++) {
 }
 
 setInterval(update_channels_connected, 500);
+setInterval(check_for_discovered, 500);

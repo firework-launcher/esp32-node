@@ -71,6 +71,8 @@ void tx_main(void) {
         read_data = read_bytes(0x20);
         cJSON_AddItemToObject(root, "inputData", read_data);
 
+        cJSON_AddItemToObject(root, "discovered", get_discovered());
+
         data = cJSON_PrintUnformatted(root);
         sprintf(msg_buffer_input, "%s\r\n", data);
         free(data);
@@ -103,6 +105,7 @@ void app_main(void)
     start_tcptx_thread(attr);
     start_tcprx_thread(attr);
     start_discovery_thread(attr);
+    start_discovery_broadcast_thread(attr);
     waiting();
     tx_main();
     ota(attr);

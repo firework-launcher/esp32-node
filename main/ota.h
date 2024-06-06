@@ -172,6 +172,16 @@ esp_err_t configure_wifissid_post_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+esp_err_t run_command_options_handler(httpd_req_t *req)
+{
+    const char resp[5] = "";
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "content-type");
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
 esp_err_t run_command_post_handler(httpd_req_t *req) {
     char content[100];
 
@@ -187,6 +197,9 @@ esp_err_t run_command_post_handler(httpd_req_t *req) {
     }
     strcpy(recv_buffer, content);
     process_rx_data(recv_buffer);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "content-type");
     while (true) {
         if (strcmp(msg_buffer_input, "") != 0) {
             httpd_resp_send(req, msg_buffer_input, HTTPD_RESP_USE_STRLEN);
@@ -322,6 +335,13 @@ httpd_uri_t run_command_post = {
     .user_ctx = NULL
 };
 
+httpd_uri_t run_command_options = {
+    .uri      = "/run_command",
+    .method   = HTTP_OPTIONS,
+    .handler  = run_command_options_handler,
+    .user_ctx = NULL
+};
+
 static esp_err_t http_server_init(void)
 {
     esp_vfs_spiffs_conf_t conf = {
@@ -349,6 +369,7 @@ static esp_err_t http_server_init(void)
         httpd_register_uri_handler(http_server, &wificonfiguressid_post);
         httpd_register_uri_handler(http_server, &wificonfigurepasswd_post);
         httpd_register_uri_handler(http_server, &run_command_post);
+        httpd_register_uri_handler(http_server, &run_command_options);
         httpd_register_uri_handler(http_server, &setdisplay_post);
     }
 

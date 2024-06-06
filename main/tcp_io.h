@@ -20,6 +20,8 @@ static const char *TAG_TCP_RX = "TCP RX";
 bool entering_ota = false;
 char msg_buffer_input[128];
 char recv_buffer[8192];
+char discovered[128][16];
+int discovered_count = 0;
 
 #include "fireworks.h"
 
